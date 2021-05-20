@@ -45,7 +45,7 @@ func addAuthor(conn *pgx.Conn, name string) (int, error) {
 	return id, nil
 }
 
-func addQuote(conn *pgx.Conn, quote string, author_id int) (int, error) {
+func addQuote(conn *pgx.Conn, quote string, author_id int, isIcelandic bool) (int, error) {
 	var id int
 	err := conn.QueryRow(context.Background(), "insert into quotes (quote, author_id) values($1,$2) returning id", quote, author_id).Scan(&id)
 	if err != nil {
