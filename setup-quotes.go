@@ -11,12 +11,12 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
-func getJSON(path string) map[string][]string {
+func getJSON(path string) (map[string][]string, error) {
 	// Open JSON
 	jsonFile, err := os.Open(path)
 	// if os.Open returns an error then handle it
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
 	}
 	fmt.Println(path, "has been opened!")
 
@@ -30,29 +30,49 @@ func getJSON(path string) map[string][]string {
 	//Convert the read value to json and put into the authors-var
 	json.Unmarshal(byteValue, &authors)
 
-	return authors
+	return authors, nil
 }
 
-func insertQuery(query string, conn *pgx.Conn) error {
-	err := conn.QueryRow(context.Background(), query).Scan()
+func addAuthor(conn *pgx.Conn, name string) (int, error) {
+	var id int
+	err := conn.QueryRow(context.Background(), "insert into authors (name) values($1) returning id", name).Scan(&id)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-		return err
+		return -1, err
 	}
-	return nil
+	return id, nil
 }
 
-// func getQuery(query string, conn *pgx.Conn) error {
-// 	err := conn.QueryRow(context.Background(), query).Scan()
-// 	if err != nil {
-// 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
-// 		return err
-// 	}
-// 	return nil
-// }
+func addQuote(conn *pgx.Conn, quote string, author_id int) (int, error) {
+	var id int
+	err := conn.QueryRow(context.Background(), "insert into quotes (quote, author_id) values($1,$2) returning id", quote, author_id).Scan(&id)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		return -1, err
+	}
+	return id, nil
+}
+
+func fillTableWithData(conn *pgx.Conn, authors map[string][]string) {
+	for author, quotes := range authors {
+		author_id, err := addAuthor(conn, author)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n Could not add author! %s \n", err, author)
+			continue
+		}
+
+		for _, quote := range quotes {
+			query := fmt.Sprintf("insert into quotes (author_id, quote) values(%d, '%s') returning id", author_id, string(quote))
+			_, err := addQuote(conn, quote, author_id)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v\n Query failed: %s", err, query)
+				continue
+			}
+		}
+	}
+}
 
 func main() {
-
 	//Connect to DB
 	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
@@ -66,14 +86,14 @@ func main() {
 
 	go func() {
 		defer wg.Done()
-		authors := getJSON("../Database-650000-Quotes/English/A.json")
-		for author, quotes := range authors {
-			fmt.Println(author)
-			for _, quote := range quotes {
-				fmt.Println(quote)
-			}
+		authors, err := getJSON("../Database-650000-Quotes/English/A.json")
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Reading JSON file Failed", err)
+			return
 		}
 
+		fillTableWithData(conn, authors)
 	}()
 
 	wg.Wait()
