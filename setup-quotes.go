@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
+	"sort"
 	"sync"
 
 	"github.com/jackc/pgx/v4"
@@ -69,32 +71,60 @@ func fillTableWithData(conn *pgx.Conn, authors map[string][]string) {
 				continue
 			}
 		}
+		fmt.Printf("Author %s added!", author)
 	}
 }
 
-func main() {
-	//Connect to DB
-	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+// ReadDir reads the directory named by dirname and returns
+// a list of directory entries sorted by filename.
+func ReadDir(dirname string) ([]os.FileInfo, error) {
+	f, err := os.Open(dirname)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
-	defer conn.Close(context.Background())
+	list, err := f.Readdir(-1)
+	f.Close()
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(list, func(i, j int) bool { return list[i].Name() < list[j].Name() })
+	return list, nil
+}
+
+func main() {
 
 	var wg sync.WaitGroup
-	wg.Add(1)
+	basePath := "../Database-650000-Quotes/English"
 
-	go func() {
-		defer wg.Done()
-		authors, err := getJSON("../Database-650000-Quotes/English/A.json")
+	re1, _ := regexp.Compile(`.json`)
+	info, _ := ReadDir(basePath)
 
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Reading JSON file Failed", err)
-			return
+	for idx, name := range info {
+		if idx > 2 {
+			break
 		}
+		if re1.MatchString(name.Name()) {
+			wg.Add(1)
+			go func(name string) {
+				conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+					os.Exit(1)
+				}
+				defer conn.Close(context.Background())
+				defer wg.Done()
+				fmt.Println(name)
+				authors, err := getJSON("../Database-650000-Quotes/English/" + name)
 
-		fillTableWithData(conn, authors)
-	}()
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Reading JSON file Failed", err)
+					return
+				}
+
+				fillTableWithData(conn, authors)
+			}(name.Name())
+		}
+	}
 
 	wg.Wait()
 }
