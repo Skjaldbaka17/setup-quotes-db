@@ -1,15 +1,15 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"sync"
-)
 
-type Author struct {
-}
+	"github.com/jackc/pgx/v4"
+)
 
 func getJSON(path string) map[string][]string {
 	// Open JSON
@@ -33,7 +33,34 @@ func getJSON(path string) map[string][]string {
 	return authors
 }
 
+func insertQuery(query string, conn *pgx.Conn) error {
+	err := conn.QueryRow(context.Background(), query).Scan()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+		return err
+	}
+	return nil
+}
+
+// func getQuery(query string, conn *pgx.Conn) error {
+// 	err := conn.QueryRow(context.Background(), query).Scan()
+// 	if err != nil {
+// 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
+// 		return err
+// 	}
+// 	return nil
+// }
+
 func main() {
+
+	//Connect to DB
+	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+	defer conn.Close(context.Background())
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 
