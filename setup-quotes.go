@@ -1,5 +1,7 @@
 package main
 
+//TODO: Clean-up this file.
+
 import (
 	"context"
 	"encoding/json"
@@ -10,7 +12,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 func getJSON(path string) (map[string][]string, error) {
@@ -35,7 +37,7 @@ func getJSON(path string) (map[string][]string, error) {
 	return authors, nil
 }
 
-func addAuthor(conn *pgx.Conn, name string) (int, error) {
+func addAuthor(conn *pgxpool.Pool, name string) (int, error) {
 	var id int
 	err := conn.QueryRow(context.Background(), "insert into authors (name) values($1) returning id", name).Scan(&id)
 	if err != nil {
@@ -45,9 +47,9 @@ func addAuthor(conn *pgx.Conn, name string) (int, error) {
 	return id, nil
 }
 
-func addQuote(conn *pgx.Conn, quote string, author_id int, isIcelandic bool) (int, error) {
+func addQuote(conn *pgxpool.Pool, quote string, authorid int, isIcelandic bool) (int, error) {
 	var id int
-	err := conn.QueryRow(context.Background(), "insert into quotes (quote, author_id) values($1,$2) returning id", quote, author_id).Scan(&id)
+	err := conn.QueryRow(context.Background(), "insert into quotes (quote, authorid) values($1,$2) returning id", quote, authorid).Scan(&id)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
 		return -1, err
@@ -55,23 +57,22 @@ func addQuote(conn *pgx.Conn, quote string, author_id int, isIcelandic bool) (in
 	return id, nil
 }
 
-func fillTableWithData(conn *pgx.Conn, authors map[string][]string) {
+func fillTableWithData(conn *pgxpool.Pool, authors map[string][]string, isIcelandic bool) {
 	for author, quotes := range authors {
-		author_id, err := addAuthor(conn, author)
+		authorid, err := addAuthor(conn, author)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n Could not add author! %s \n", err, author)
 			continue
 		}
 
 		for _, quote := range quotes {
-			query := fmt.Sprintf("insert into quotes (author_id, quote) values(%d, '%s') returning id", author_id, string(quote))
-			_, err := addQuote(conn, quote, author_id)
+			query := fmt.Sprintf("insert into quotes (authorid, quote) values(%d, '%s') returning id", authorid, string(quote))
+			_, err := addQuote(conn, quote, authorid, isIcelandic)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%v\n Query failed: %s", err, query)
 				continue
 			}
 		}
-		fmt.Printf("Author %s added!", author)
 	}
 }
 
@@ -91,40 +92,93 @@ func ReadDir(dirname string) ([]os.FileInfo, error) {
 	return list, nil
 }
 
-func main() {
+func readTextFile(path string) string {
+	dat, err := ioutil.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+	return string(dat)
+}
 
+func setupDBEnv(conn *pgxpool.Pool) error {
+	var err error
+	if err != nil {
+		return err
+	}
+
+	_, err = conn.Query(context.Background(), "drop table if exists authors,quotes;")
+	if err != nil {
+		return err
+	}
+	fmt.Print("HERE")
+
+	file := readTextFile("./sql/authors.sql")
+	_, err = conn.Query(context.Background(), file)
+	if err != nil {
+		return err
+	}
+	fmt.Print("HERE")
+	file = readTextFile("./sql/quotes.sql")
+	_, err = conn.Query(context.Background(), file)
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
+func insertIntoDB(pool *pgxpool.Pool) {
 	var wg sync.WaitGroup
-	basePath := "../Database-650000-Quotes/English"
+	basePath := "../Database-650000-Quotes/"
 
 	re1, _ := regexp.Compile(`.json`)
-	info, _ := ReadDir(basePath)
 
-	for idx, name := range info {
-		if idx > 2 {
-			break
+	for i := 0; i < 2; i++ {
+		var path string
+		isIcelandic := i == 1
+		if isIcelandic {
+			path = basePath + "Icelandic"
+		} else {
+			path = basePath + "English"
 		}
-		if re1.MatchString(name.Name()) {
-			wg.Add(1)
-			go func(name string) {
-				conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-					os.Exit(1)
-				}
-				defer conn.Close(context.Background())
-				defer wg.Done()
-				fmt.Println(name)
-				authors, err := getJSON("../Database-650000-Quotes/English/" + name)
+		info, _ := ReadDir(path)
 
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Reading JSON file Failed", err)
-					return
-				}
+		for _, name := range info {
+			if re1.MatchString(name.Name()) {
 
-				fillTableWithData(conn, authors)
-			}(name.Name())
+				wg.Add(1)
+				go func(name string, isIcelandic bool) {
+					defer wg.Done()
+					fmt.Println(name)
+					authors, err := getJSON(fmt.Sprintf("%s/%s", path, name))
+
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Reading JSON file Failed, %s", err)
+						return
+					}
+
+					fillTableWithData(pool, authors, isIcelandic)
+					fmt.Println(fmt.Sprintf("%s/%s", path, name), "is Done!")
+				}(name.Name(), isIcelandic)
+			}
 		}
 	}
 
 	wg.Wait()
+}
+
+func main() {
+	poolConn, err := pgxpool.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		fmt.Printf("error: %s", err)
+		return
+	}
+	err = setupDBEnv(poolConn)
+	if err != nil {
+		fmt.Printf("error: %s", err)
+		return
+	}
+
+	insertIntoDB(poolConn)
+	defer poolConn.Close()
 }
