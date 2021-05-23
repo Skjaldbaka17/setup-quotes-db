@@ -1,7 +1,5 @@
 package main
 
-//TODO: Clean-up this file.
-
 import (
 	"context"
 	"encoding/json"
@@ -110,15 +108,25 @@ func setupDBEnv(conn *pgxpool.Pool) error {
 	if err != nil {
 		return err
 	}
-	fmt.Print("HERE")
 
 	file := readTextFile("./sql/authors.sql")
 	_, err = conn.Query(context.Background(), file)
 	if err != nil {
 		return err
 	}
-	fmt.Print("HERE")
 	file = readTextFile("./sql/quotes.sql")
+	_, err = conn.Query(context.Background(), file)
+	if err != nil {
+		return err
+	}
+
+	file = readTextFile("./sql/searchView.sql")
+	_, err = conn.Query(context.Background(), file)
+	if err != nil {
+		return err
+	}
+
+	file = readTextFile("./sql/initQueries.sql")
 	_, err = conn.Query(context.Background(), file)
 	if err != nil {
 		return err
@@ -173,12 +181,14 @@ func main() {
 		fmt.Printf("error: %s", err)
 		return
 	}
+	// defer poolConn.Close() //does not work!? Make program run forever, as if waiting for some connection?
 	err = setupDBEnv(poolConn)
+
+	fmt.Print(err)
 	if err != nil {
 		fmt.Printf("error: %s", err)
 		return
 	}
 
 	insertIntoDB(poolConn)
-	defer poolConn.Close()
 }
