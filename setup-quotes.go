@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"regexp"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -98,13 +101,29 @@ func readTextFile(path string) string {
 	return string(dat)
 }
 
+func dropStuff(conn *pgxpool.Pool) error {
+	log.Println("Running: drop view if exists searchviews;")
+	_, err := conn.Exec(context.Background(), "drop view if exists searchviews;")
+	if err != nil {
+		return err
+	}
+	log.Println("Running: drop table if exists quotes, authors cascade;")
+	_, err = conn.Exec(context.Background(), "drop table if exists quotes, authors cascade;")
+	if err != nil {
+		return err
+	}
+	log.Println("Running: drop view if exists searchviews;")
+	return nil
+}
+
 func setupDBEnv(conn *pgxpool.Pool) error {
 	var err error
 	if err != nil {
 		return err
 	}
 
-	_, err = conn.Query(context.Background(), "drop table if exists authors,quotes;")
+	err = dropStuff(conn)
+
 	if err != nil {
 		return err
 	}
@@ -115,18 +134,6 @@ func setupDBEnv(conn *pgxpool.Pool) error {
 		return err
 	}
 	file = readTextFile("./sql/quotes.sql")
-	_, err = conn.Query(context.Background(), file)
-	if err != nil {
-		return err
-	}
-
-	file = readTextFile("./sql/searchView.sql")
-	_, err = conn.Query(context.Background(), file)
-	if err != nil {
-		return err
-	}
-
-	file = readTextFile("./sql/initQueries.sql")
 	_, err = conn.Query(context.Background(), file)
 	if err != nil {
 		return err
@@ -175,12 +182,50 @@ func insertIntoDB(pool *pgxpool.Pool) {
 	wg.Wait()
 }
 
+func finalDBQueries(pool *pgxpool.Pool) error {
+	var wg sync.WaitGroup
+
+	var err error
+	fmt.Println("Running final queries...")
+
+	wrapUpFile := readTextFile("./sql/wrapUpQueries.sql")
+	scanner := bufio.NewScanner(strings.NewReader(wrapUpFile))
+
+	for scanner.Scan() {
+		query := scanner.Text()
+		if query == "" {
+			continue
+		}
+		log.Println("Running: ", query)
+		wg.Add(1)
+		go func(query string) {
+			defer wg.Done()
+			_, err := pool.Query(context.Background(), query)
+			if err != nil {
+				log.Printf("Reading JSON file Failed, %s", err)
+				return
+			}
+		}(query)
+
+	}
+
+	log.Println("Creating searchView...")
+	file := readTextFile("./sql/searchView.sql")
+	_, err = pool.Query(context.Background(), file)
+	if err != nil {
+		return err
+	}
+	wg.Wait()
+	return nil
+}
+
 func main() {
 	poolConn, err := pgxpool.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		fmt.Printf("error: %s", err)
 		return
 	}
+
 	// defer poolConn.Close() //does not work!? Make program run forever, as if waiting for some connection?
 	err = setupDBEnv(poolConn)
 
@@ -191,4 +236,6 @@ func main() {
 	}
 
 	insertIntoDB(poolConn)
+
+	defer finalDBQueries(poolConn)
 }
