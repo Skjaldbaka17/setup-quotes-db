@@ -90,7 +90,6 @@ func insertIntoTopicsDB(pool *pgxpool.Pool) {
 				wg.Add(1)
 				go func(name string) {
 					defer wg.Done()
-					fmt.Println(name)
 
 					if isIcelandic {
 						authors, err := handlers.GetIcelandicTopicJSON(fmt.Sprintf("%s/%s", path, name))
@@ -171,7 +170,6 @@ func main() {
 	// defer poolConn.Close() //does not work!? Make program run forever, as if waiting for some connection?
 	err = handlers.SetupDBEnv(poolConn)
 
-	fmt.Print(err)
 	if err != nil {
 		fmt.Printf("error: %s", err)
 		return

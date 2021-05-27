@@ -121,7 +121,7 @@ func AddTopic(conn *pgxpool.Pool, topicName string, quotes map[string]string, is
 }
 
 func dropStuff(conn *pgxpool.Pool) error {
-	log.Println("Running: drop view if exists searchviews;")
+	log.Println("Running: drop view if exists searchviews, topicsview;")
 	_, err := conn.Exec(context.Background(), "drop view if exists searchviews;")
 	if err != nil {
 		return err
@@ -164,6 +164,12 @@ func SetupDBEnv(conn *pgxpool.Pool) error {
 	}
 
 	file = ReadTextFile("./sql/topicsToQuotes.sql")
+	_, err = conn.Exec(context.Background(), file)
+	if err != nil {
+		return err
+	}
+
+	file = ReadTextFile("./sql/topicsView.sql")
 	_, err = conn.Exec(context.Background(), file)
 	if err != nil {
 		return err
