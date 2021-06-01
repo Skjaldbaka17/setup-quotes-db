@@ -16,7 +16,7 @@ import (
 
 func fillTableWithData(conn *pgxpool.Pool, authors map[string][]string, isIcelandic bool) {
 	for author, quotes := range authors {
-		authorid, err := handlers.AddAuthor(conn, author)
+		authorid, err := handlers.AddAuthor(conn, author, isIcelandic)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n Could not add author! %s \n", err, author)
 			continue

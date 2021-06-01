@@ -9,9 +9,14 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-func AddAuthor(conn *pgxpool.Pool, name string) (int, error) {
+func AddAuthor(conn *pgxpool.Pool, name string, isIcelandic bool) (int, error) {
 	var id int
-	err := conn.QueryRow(context.Background(), "insert into authors (name) values($1) on conflict (name) do update set name = $1 returning id", name).Scan(&id)
+	var err error
+	if isIcelandic {
+		err = conn.QueryRow(context.Background(), "insert into authors (name,hasicelandicquotes) values($1,$2) on conflict (name) do update set hasicelandicquotes = $2 returning id", name, isIcelandic).Scan(&id)
+	} else {
+		err = conn.QueryRow(context.Background(), "insert into authors (name) values($1) on conflict (name) do update set name = $1 returning id", name).Scan(&id)
+	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
 		return -1, err
@@ -60,7 +65,7 @@ func AddIcelandicTopic(conn *pgxpool.Pool, topicName string, quotes map[string][
 
 	for author, quoteArray := range quotes {
 		var authorId, quoteId int
-		authorId, err = AddAuthor(conn, author)
+		authorId, err = AddAuthor(conn, author, isIcelandic)
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Inserting author for Topic failed: %v\n", err)
@@ -97,7 +102,7 @@ func AddTopic(conn *pgxpool.Pool, topicName string, quotes map[string]string, is
 
 	for author, quote := range quotes {
 		var authorId, quoteId int
-		authorId, err = AddAuthor(conn, author)
+		authorId, err = AddAuthor(conn, author, isIcelandic)
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Inserting author for Topic failed: %v\n", err)
