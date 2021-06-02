@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Skjaldbaka17/setup-quotes-db/handlers"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -16,7 +17,7 @@ import (
 
 func fillTableWithData(conn *pgxpool.Pool, authors map[string][]string, isIcelandic bool) {
 	for author, quotes := range authors {
-		authorid, err := handlers.AddAuthor(conn, author, isIcelandic)
+		authorid, err := handlers.AddAuthor(conn, author, isIcelandic, len(quotes))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n Could not add author! %s \n", err, author)
 			continue
@@ -157,6 +158,39 @@ func finalDBQueries(pool *pgxpool.Pool) error {
 
 	wg.Wait()
 	return nil
+}
+
+//TODO count icelandic quotes and english separately, or not you decide
+//Will update the nr of quotes both icelandic and english
+func updateNrOfQuotesPerAuthor(poolConn *pgxpool.Pool) {
+	start := time.Now()
+	query := "select id from authors;"
+
+	rows, _ := poolConn.Query(context.Background(), query)
+
+	i := 0
+	for rows.Next() {
+		if i%100 == 0 {
+			log.Println("Nr Rows updated:", i)
+		}
+		i++
+		if err := rows.Err(); err != nil {
+			log.Println("next row", err)
+			continue
+		}
+		vals, _ := rows.Values()
+		authId := vals[0]
+
+		var count int
+		rows1 := poolConn.QueryRow(context.Background(), "select count(*) from quotes where authorid = $1", authId)
+		_ = rows1.Scan(&count)
+		nrOfQuotes := count
+		_, _ = poolConn.Exec(context.Background(), "update authors set nrofquotes = $1 where id = $2 returning *", nrOfQuotes, authId)
+	}
+
+	t := time.Now()
+	elapsed := t.Sub(start)
+	fmt.Printf("Time: %f", elapsed.Seconds())
 }
 
 func main() {

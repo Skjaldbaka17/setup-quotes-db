@@ -9,13 +9,21 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-func AddAuthor(conn *pgxpool.Pool, name string, isIcelandic bool) (int, error) {
+func AddAuthor(conn *pgxpool.Pool, name string, isIcelandic bool, nrOfQuotes int) (int, error) {
 	var id int
 	var err error
 	if isIcelandic {
-		err = conn.QueryRow(context.Background(), "insert into authors (name,hasicelandicquotes) values($1,$2) on conflict (name) do update set hasicelandicquotes = $2 returning id", name, isIcelandic).Scan(&id)
+		if nrOfQuotes >= 0 {
+			err = conn.QueryRow(context.Background(), "insert into authors (name,hasicelandicquotes,nroficelandicquotes) values($1,$2,$3) on conflict (name) do update set hasicelandicquotes = $2, nroficelandicquotes=$3 returning id", name, isIcelandic, nrOfQuotes).Scan(&id)
+		} else {
+			err = conn.QueryRow(context.Background(), "insert into authors (name,hasicelandicquotes) values($1,$2) on conflict (name) do update set hasicelandicquotes = $2 returning id", name, isIcelandic).Scan(&id)
+		}
 	} else {
-		err = conn.QueryRow(context.Background(), "insert into authors (name) values($1) on conflict (name) do update set name = $1 returning id", name).Scan(&id)
+		if nrOfQuotes >= 0 {
+			err = conn.QueryRow(context.Background(), "insert into authors (name, nrofenglishquotes) values($1,$2) on conflict (name) do update set name = $1,nrofenglishquotes=$2 returning id", name, nrOfQuotes).Scan(&id)
+		} else {
+			err = conn.QueryRow(context.Background(), "insert into authors (name) values($1) on conflict (name) do update set name = $1 returning id", name).Scan(&id)
+		}
 	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
@@ -65,7 +73,7 @@ func AddIcelandicTopic(conn *pgxpool.Pool, topicName string, quotes map[string][
 
 	for author, quoteArray := range quotes {
 		var authorId, quoteId int
-		authorId, err = AddAuthor(conn, author, isIcelandic)
+		authorId, err = AddAuthor(conn, author, isIcelandic, -1)
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Inserting author for Topic failed: %v\n", err)
@@ -102,7 +110,7 @@ func AddTopic(conn *pgxpool.Pool, topicName string, quotes map[string]string, is
 
 	for author, quote := range quotes {
 		var authorId, quoteId int
-		authorId, err = AddAuthor(conn, author, isIcelandic)
+		authorId, err = AddAuthor(conn, author, isIcelandic, -1)
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Inserting author for Topic failed: %v\n", err)
@@ -147,11 +155,11 @@ func SetupDBEnv(conn *pgxpool.Pool) error {
 	}
 
 	err = dropStuff(conn)
-
+	log.Println("HERE")
 	if err != nil {
 		return err
 	}
-
+	log.Println("HERE")
 	file := ReadTextFile("./sql/authors.sql")
 	_, err = conn.Exec(context.Background(), file)
 	if err != nil {
