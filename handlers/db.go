@@ -139,7 +139,7 @@ func dropStuff(conn *pgxpool.Pool) error {
 	if err != nil {
 		return err
 	}
-	log.Println("Running: drop table if exists topicstoquotes, topics, quotes, authors cascade;")
+	log.Println("Running: drop table if exists quoteoftheday, topicstoquotes, topics, quotes, authors cascade;")
 	_, err = conn.Exec(context.Background(), "drop table if exists topicstoquotes, topics, quotes, authors cascade;")
 	if err != nil {
 		return err
@@ -183,6 +183,12 @@ func SetupDBEnv(conn *pgxpool.Pool) error {
 	}
 
 	file = ReadTextFile("./sql/topicsView.sql")
+	_, err = conn.Exec(context.Background(), file)
+	if err != nil {
+		return err
+	}
+
+	file = ReadTextFile("./sql/quoteoftheday.sql")
 	_, err = conn.Exec(context.Background(), file)
 	if err != nil {
 		return err
