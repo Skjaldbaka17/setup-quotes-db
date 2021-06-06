@@ -223,49 +223,24 @@ func main() {
 		return
 	}
 
-	_, err = poolConn.Exec(context.Background(), "drop view if exists searchview, topicsview, qodview;")
+	err = createAdminUser(poolConn)
 	if err != nil {
-		fmt.Println(err)
-		// return err
+		fmt.Printf("error: %s", err)
+		return
+	}
+	fmt.Println("GOD user created!")
+
+	// defer poolConn.Close() //does not work!? Make program run forever, as if waiting for some connection?
+	err = handlers.SetupDBEnv(poolConn)
+
+	if err != nil {
+		fmt.Printf("error: %s", err)
+		return
 	}
 
-	file := handlers.ReadTextFile("./sql/qodview.sql")
-	_, err = poolConn.Exec(context.Background(), file)
-	if err != nil {
-		fmt.Println(err)
-		// return err
-	}
+	insertIntoDB(poolConn)
 
-	file = handlers.ReadTextFile("./sql/topicsView.sql")
-	_, err = poolConn.Exec(context.Background(), file)
-	if err != nil {
-		fmt.Println(err)
-	}
+	insertIntoTopicsDB(poolConn)
 
-	file = handlers.ReadTextFile("./sql/searchView.sql")
-	_, err = poolConn.Exec(context.Background(), file)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	// err = createAdminUser(poolConn)
-	// if err != nil {
-	// 	fmt.Printf("error: %s", err)
-	// 	return
-	// }
-	// fmt.Println("GOD user created!")
-
-	// // defer poolConn.Close() //does not work!? Make program run forever, as if waiting for some connection?
-	// err = handlers.SetupDBEnv(poolConn)
-
-	// if err != nil {
-	// 	fmt.Printf("error: %s", err)
-	// 	return
-	// }
-
-	// insertIntoDB(poolConn)
-
-	// insertIntoTopicsDB(poolConn)
-
-	// defer finalDBQueries(poolConn)
+	defer finalDBQueries(poolConn)
 }

@@ -205,5 +205,11 @@ func SetupDBEnv(conn *pgxpool.Pool) error {
 		return err
 	}
 
+	file = ReadTextFile("./sql/qodview.sql")
+	_, err = conn.Exec(context.Background(), file)
+	if err != nil {
+		return err
+	}
+
 	return err
 }
