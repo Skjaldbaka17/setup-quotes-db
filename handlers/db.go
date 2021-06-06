@@ -139,13 +139,13 @@ func SaveAdmin(userName string, passWordHash string, conn *pgxpool.Pool) error {
 }
 
 func dropStuff(conn *pgxpool.Pool) error {
-	log.Println("Running: drop view if exists searchviews, topicsview;")
-	_, err := conn.Exec(context.Background(), "drop view if exists searchviews;")
+	log.Println("Running: drop view if exists searchviews, topicsview, qodview;")
+	_, err := conn.Exec(context.Background(), "drop view if exists searchview, topicsview, qodview;")
 	if err != nil {
 		return err
 	}
 	log.Println("Running: drop table if exists users, quoteoftheday, topicstoquotes, topics, quotes, authors cascade;")
-	_, err = conn.Exec(context.Background(), "drop table if exists users,topicstoquotes, topics, quotes, authors cascade;")
+	_, err = conn.Exec(context.Background(), "drop table if exists quoteoftheday,users,topicstoquotes, topics, quotes, authors cascade;")
 	if err != nil {
 		return err
 	}
