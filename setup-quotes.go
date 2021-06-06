@@ -13,6 +13,7 @@ import (
 
 	"github.com/Skjaldbaka17/setup-quotes-db/handlers"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func fillTableWithData(conn *pgxpool.Pool, authors map[string][]string, isIcelandic bool) {
@@ -193,6 +194,27 @@ func updateNrOfQuotesPerAuthor(poolConn *pgxpool.Pool) {
 	fmt.Printf("Time: %f", elapsed.Seconds())
 }
 
+func readResponse(command string) string {
+	fmt.Println("Please", command)
+	var response string
+	reader := bufio.NewReader(os.Stdin)
+	response, _ = reader.ReadString('\n')
+	response = strings.Trim(response, "\n")
+	if response != "" {
+		return response
+	} else {
+
+		return readResponse(command)
+	}
+}
+
+func createAdminUser(poolConn *pgxpool.Pool) error {
+	userName := readResponse("choose a username for the GOD user:")
+	passWord := readResponse("choose a password:")
+	hash, _ := bcrypt.GenerateFromPassword([]byte(passWord), bcrypt.DefaultCost)
+	return handlers.SaveAdmin(userName, string(hash), poolConn)
+}
+
 func main() {
 	poolConn, err := pgxpool.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 
@@ -200,6 +222,13 @@ func main() {
 		fmt.Printf("error: %s", err)
 		return
 	}
+
+	err = createAdminUser(poolConn)
+	if err != nil {
+		fmt.Printf("error: %s", err)
+		return
+	}
+	fmt.Println("GOD user created!")
 
 	// defer poolConn.Close() //does not work!? Make program run forever, as if waiting for some connection?
 	err = handlers.SetupDBEnv(poolConn)

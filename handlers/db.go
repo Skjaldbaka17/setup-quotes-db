@@ -133,14 +133,19 @@ func AddTopic(conn *pgxpool.Pool, topicName string, quotes map[string]string, is
 	return nil
 }
 
+func SaveAdmin(userName string, passWordHash string, conn *pgxpool.Pool) error {
+	_, err := conn.Exec(context.Background(), "insert into users (name,passwordhash,tier) values($1,$2,'GOD')", userName, passWordHash)
+	return err
+}
+
 func dropStuff(conn *pgxpool.Pool) error {
 	log.Println("Running: drop view if exists searchviews, topicsview;")
 	_, err := conn.Exec(context.Background(), "drop view if exists searchviews;")
 	if err != nil {
 		return err
 	}
-	log.Println("Running: drop table if exists quoteoftheday, topicstoquotes, topics, quotes, authors cascade;")
-	_, err = conn.Exec(context.Background(), "drop table if exists topicstoquotes, topics, quotes, authors cascade;")
+	log.Println("Running: drop table if exists users, quoteoftheday, topicstoquotes, topics, quotes, authors cascade;")
+	_, err = conn.Exec(context.Background(), "drop table if exists users,topicstoquotes, topics, quotes, authors cascade;")
 	if err != nil {
 		return err
 	}
@@ -189,6 +194,12 @@ func SetupDBEnv(conn *pgxpool.Pool) error {
 	}
 
 	file = ReadTextFile("./sql/quoteoftheday.sql")
+	_, err = conn.Exec(context.Background(), file)
+	if err != nil {
+		return err
+	}
+
+	file = ReadTextFile("./sql/users.sql")
 	_, err = conn.Exec(context.Background(), file)
 	if err != nil {
 		return err
