@@ -223,20 +223,18 @@ func main() {
 		return
 	}
 
+	// defer poolConn.Close() //does not work!? Make program run forever, as if waiting for some connection?
+	err = handlers.SetupDBEnv(poolConn)
+	if err != nil {
+		fmt.Printf("error: %s", err)
+		return
+	}
 	err = createAdminUser(poolConn)
 	if err != nil {
 		fmt.Printf("error: %s", err)
 		return
 	}
 	fmt.Println("GOD user created!")
-
-	// defer poolConn.Close() //does not work!? Make program run forever, as if waiting for some connection?
-	err = handlers.SetupDBEnv(poolConn)
-
-	if err != nil {
-		fmt.Printf("error: %s", err)
-		return
-	}
 
 	insertIntoDB(poolConn)
 

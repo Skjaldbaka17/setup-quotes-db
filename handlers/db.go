@@ -139,13 +139,13 @@ func SaveAdmin(userName string, passWordHash string, conn *pgxpool.Pool) error {
 }
 
 func dropStuff(conn *pgxpool.Pool) error {
-	log.Println("Running: drop view if exists searchviews, topicsview, qodview;")
-	_, err := conn.Exec(context.Background(), "drop view if exists searchview, topicsview, qodview;")
+	log.Println("Running: drop view if exists aodview, aodiceview ,searchviews, topicsview, qodview, qodiceview;")
+	_, err := conn.Exec(context.Background(), "drop view if exists aodview, aodiceview, searchview, topicsview, qodview, qodiceview;")
 	if err != nil {
 		return err
 	}
-	log.Println("Running: drop table if exists users, quoteoftheday, topicstoquotes, topics, quotes, authors cascade;")
-	_, err = conn.Exec(context.Background(), "drop table if exists quoteoftheday,users,topicstoquotes, topics, quotes, authors cascade;")
+	log.Println("Running: drop table if exists users, qod, aod, aodice, qodice, topicstoquotes, topics, quotes, authors cascade;")
+	_, err = conn.Exec(context.Background(), "drop table if exists aod, aodice, qod, qodice, users, topicstoquotes, topics, quotes, authors cascade;")
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,25 @@ func SetupDBEnv(conn *pgxpool.Pool) error {
 		return err
 	}
 
-	file = ReadTextFile("./sql/quoteoftheday.sql")
+	file = ReadTextFile("./sql/qod.sql")
+	_, err = conn.Exec(context.Background(), file)
+	if err != nil {
+		return err
+	}
+
+	file = ReadTextFile("./sql/qodice.sql")
+	_, err = conn.Exec(context.Background(), file)
+	if err != nil {
+		return err
+	}
+
+	file = ReadTextFile("./sql/aod.sql")
+	_, err = conn.Exec(context.Background(), file)
+	if err != nil {
+		return err
+	}
+
+	file = ReadTextFile("./sql/aodice.sql")
 	_, err = conn.Exec(context.Background(), file)
 	if err != nil {
 		return err
@@ -206,6 +224,22 @@ func SetupDBEnv(conn *pgxpool.Pool) error {
 	}
 
 	file = ReadTextFile("./sql/qodview.sql")
+	_, err = conn.Exec(context.Background(), file)
+	if err != nil {
+		return err
+	}
+	file = ReadTextFile("./sql/qodiceview.sql")
+	_, err = conn.Exec(context.Background(), file)
+	if err != nil {
+		return err
+	}
+
+	file = ReadTextFile("./sql/aodview.sql")
+	_, err = conn.Exec(context.Background(), file)
+	if err != nil {
+		return err
+	}
+	file = ReadTextFile("./sql/aodiceview.sql")
 	_, err = conn.Exec(context.Background(), file)
 	if err != nil {
 		return err
