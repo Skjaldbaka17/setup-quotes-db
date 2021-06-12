@@ -1,4 +1,4 @@
-create or replace view searchview as 
+create or replace view searchView as 
 select authors.id as authorid,
        authors.name,
        quotes.id as quoteid,
@@ -6,7 +6,9 @@ select authors.id as authorid,
        quotes.isicelandic as isicelandic,
        authors.tsv || quotes.tsv  as tsv,
        authors.tsv as nametsv,
-       quotes.tsv as quotetsv
+       quotes.tsv as quotetsv,
+       quotes.count as quotecount,
+       authors.count as authorcount
 from authors
    inner join quotes
       on authors.id = quotes.authorid;
