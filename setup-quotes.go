@@ -209,10 +209,11 @@ func readResponse(command string) string {
 }
 
 func createAdminUser(poolConn *pgxpool.Pool) error {
+	email := readResponse("choose an email for the GOD user:")
 	userName := readResponse("choose a username for the GOD user:")
 	passWord := readResponse("choose a password:")
 	hash, _ := bcrypt.GenerateFromPassword([]byte(passWord), bcrypt.DefaultCost)
-	return handlers.SaveAdmin(userName, string(hash), poolConn)
+	return handlers.SaveAdmin(userName, string(hash), email, poolConn)
 }
 
 func main() {

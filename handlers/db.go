@@ -133,8 +133,8 @@ func AddTopic(conn *pgxpool.Pool, topicName string, quotes map[string]string, is
 	return nil
 }
 
-func SaveAdmin(userName string, passWordHash string, conn *pgxpool.Pool) error {
-	_, err := conn.Exec(context.Background(), "insert into users (name,passwordhash,tier) values($1,$2,'GOD')", userName, passWordHash)
+func SaveAdmin(userName string, passWordHash string, email string, conn *pgxpool.Pool) error {
+	_, err := conn.Exec(context.Background(), "insert into users (name,passwordhash,tier,email) values($1,$2,'GOD',$3)", userName, passWordHash, email)
 	return err
 }
 
