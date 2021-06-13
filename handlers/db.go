@@ -144,7 +144,7 @@ func dropStuff(conn *pgxpool.Pool) error {
 	if err != nil {
 		return err
 	}
-	log.Println("Running: drop table if exists users, qod, aod, aodice, qodice, topicstoquotes, topics, quotes, authors cascade;")
+	log.Println("Running: drop table if exists errorshistory, requestshistory, users, qod, aod, aodice, qodice, topicstoquotes, topics, quotes, authors cascade;")
 	_, err = conn.Exec(context.Background(), "drop table if exists aod, aodice, qod, qodice, users, topicstoquotes, topics, quotes, authors cascade;")
 	if err != nil {
 		return err
@@ -218,6 +218,18 @@ func SetupDBEnv(conn *pgxpool.Pool) error {
 	}
 
 	file = ReadTextFile("./sql/users.sql")
+	_, err = conn.Exec(context.Background(), file)
+	if err != nil {
+		return err
+	}
+
+	file = ReadTextFile("./sql/requestshistory.sql")
+	_, err = conn.Exec(context.Background(), file)
+	if err != nil {
+		return err
+	}
+
+	file = ReadTextFile("./sql/errorshistory.sql")
 	_, err = conn.Exec(context.Background(), file)
 	if err != nil {
 		return err
