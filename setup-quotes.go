@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Skjaldbaka17/setup-quotes-db/handlers"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -25,7 +26,7 @@ func fillTableWithData(conn *pgxpool.Pool, authors map[string][]string, isIcelan
 		}
 
 		for _, quote := range quotes {
-			query := fmt.Sprintf("insert into quotes (authorid, quote, isicelandic) values(%d, '%s', %t) returning id", authorid, string(quote), isIcelandic)
+			query := fmt.Sprintf("insert into quotes (author_id, quote, is_icelandic) values(%d, '%s', %t) returning id", authorid, string(quote), isIcelandic)
 			_, err := handlers.AddQuote(conn, quote, authorid, isIcelandic)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%v\n Query failed: %s", err, query)
@@ -183,10 +184,10 @@ func updateNrOfQuotesPerAuthor(poolConn *pgxpool.Pool) {
 		authId := vals[0]
 
 		var count int
-		rows1 := poolConn.QueryRow(context.Background(), "select count(*) from quotes where authorid = $1", authId)
+		rows1 := poolConn.QueryRow(context.Background(), "select count(*) from quotes where author_id = $1", authId)
 		_ = rows1.Scan(&count)
 		nrOfQuotes := count
-		_, _ = poolConn.Exec(context.Background(), "update authors set nrofquotes = $1 where id = $2 returning *", nrOfQuotes, authId)
+		_, _ = poolConn.Exec(context.Background(), "update authors set nr_of_quotes = $1 where id = $2 returning *", nrOfQuotes, authId)
 	}
 
 	t := time.Now()
@@ -212,8 +213,10 @@ func createAdminUser(poolConn *pgxpool.Pool) error {
 	email := readResponse("choose an email for the GOD user:")
 	userName := readResponse("choose a username for the GOD user:")
 	passWord := readResponse("choose a password:")
+	uuid, _ := uuid.NewRandom()
+	apiKey := uuid.String()
 	hash, _ := bcrypt.GenerateFromPassword([]byte(passWord), bcrypt.DefaultCost)
-	return handlers.SaveAdmin(userName, string(hash), email, poolConn)
+	return handlers.SaveAdmin(userName, string(hash), email, apiKey, poolConn)
 }
 
 func main() {
