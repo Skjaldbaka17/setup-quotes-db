@@ -1,4 +1,4 @@
-create or replace view searchView as 
+create MATERIALIZED VIEW searchView as 
 select authors.id as author_id,
        authors.name,
        quotes.id as quote_id,
