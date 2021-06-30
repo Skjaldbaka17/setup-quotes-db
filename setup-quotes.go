@@ -129,6 +129,47 @@ func finalDBQueries(pool *pgxpool.Pool) error {
 	var wg sync.WaitGroup
 
 	var err error
+
+	log.Println("Creating searchView...")
+	file := handlers.ReadTextFile("./sql/searchView.sql")
+	_, err = pool.Exec(context.Background(), file)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	log.Println("Creating topicsView...")
+	file = handlers.ReadTextFile("./sql/topicsView.sql")
+	_, err = pool.Exec(context.Background(), file)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	log.Println("Creating uniqueLexemeAuthorsView...")
+	file = handlers.ReadTextFile("./sql/uniqueLexemeAuthorsView.sql")
+	_, err = pool.Exec(context.Background(), file)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	log.Println("Creating uniqueLexemeQuotesView...")
+	file = handlers.ReadTextFile("./sql/uniqueLexemeQuotesView.sql")
+	_, err = pool.Exec(context.Background(), file)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	log.Println("Creating uniqueLexemeView...")
+	file = handlers.ReadTextFile("./sql/uniqueLexemeView.sql")
+	_, err = pool.Exec(context.Background(), file)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
 	fmt.Println("Running final queries...")
 
 	wrapUpFile := handlers.ReadTextFile("./sql/wrapUpQueries.sql")
@@ -149,13 +190,6 @@ func finalDBQueries(pool *pgxpool.Pool) error {
 			}
 
 		}(query)
-	}
-
-	log.Println("Creating searchView...")
-	file := handlers.ReadTextFile("./sql/searchView.sql")
-	_, err = pool.Exec(context.Background(), file)
-	if err != nil {
-		return err
 	}
 
 	wg.Wait()

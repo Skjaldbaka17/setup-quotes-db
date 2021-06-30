@@ -5,4 +5,7 @@
 - [ ] Clean up setup-quotes.go file
 - [ ] Add tests
 - [ ] combine topicsView with searchView?
+- [ ] Draw up DATABASE!
+
+- [x] implement this type of search: http://rachbelaid.com/postgres-full-text-search-is-good-enough/
 

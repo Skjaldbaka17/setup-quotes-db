@@ -140,10 +140,17 @@ func SaveAdmin(userName string, passWordHash string, email string, apiKey string
 
 func dropStuff(conn *pgxpool.Pool) error {
 	log.Println("Running: drop view if exists aodview, aodiceview ,searchviews, topicsview, qodview, qodiceview;")
-	_, err := conn.Exec(context.Background(), "drop view if exists aodview, aodiceview, searchview, topicsview, qodview, qodiceview;")
+	_, err := conn.Exec(context.Background(), "drop view if exists aodview, aodiceview, qodview, qodiceview;")
 	if err != nil {
 		return err
 	}
+
+	log.Println("Running: drop materialized view if exists searchviews, topicsview, unique_lexeme_authors, unique_lexeme_quotes, unique_lexeme;")
+	_, err = conn.Exec(context.Background(), "drop materialized view if exists searchviews, topicsview, unique_lexeme_authors, unique_lexeme_quotes, unique_lexeme;")
+	if err != nil {
+		return err
+	}
+
 	log.Println("Running: drop table if exists errorhistory, requesthistory, users, qod, aod, aodice, qodice, topicstoquotes, topics, quotes, authors cascade;")
 	_, err = conn.Exec(context.Background(), "drop table if exists errorhistory, requesthistory,aod, aodice, qod, qodice, users, topicstoquotes, topics, quotes, authors cascade;")
 	if err != nil {
@@ -180,12 +187,6 @@ func SetupDBEnv(conn *pgxpool.Pool) error {
 	}
 
 	file = ReadTextFile("./sql/topicsToQuotes.sql")
-	_, err = conn.Exec(context.Background(), file)
-	if err != nil {
-		return err
-	}
-
-	file = ReadTextFile("./sql/topicsView.sql")
 	_, err = conn.Exec(context.Background(), file)
 	if err != nil {
 		return err
