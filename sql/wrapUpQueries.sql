@@ -22,6 +22,14 @@ CREATE INDEX if not exists index_topics_view_on_quote_id ON topicsView(quote_id)
 create INDEX if not exists index_request_history_on_user_id on requesthistory(user_id);
 create INDEX if not exists index_request_history_on_created_at on requesthistory(created_at);
 
+CREATE INDEX if not exists index_authors_on_count ON authors(count);
+CREATE INDEX if not exists index_authors_on_nr_of_english_quotes ON authors(nr_of_english_quotes);
+
+CREATE INDEX if not exists index_popularity_view_on_author_id ON popularityview(author_id);
+CREATE INDEX if not exists index_popularity_view_on_quote_id ON popularityview(quote_id);
+CREATE INDEX if not exists index_popularity_view_on_quote_count ON popularityview(quote_count);
+CREATE INDEX if not exists index_popularity_view_on_author_count ON popularityview(author_count);
+
 CREATE INDEX words_idx ON unique_lexeme USING gin(word gin_trgm_ops);
 CREATE INDEX words_idx_quotes ON unique_lexeme_quotes USING gin(word gin_trgm_ops);
 CREATE INDEX words_idx_authors ON unique_lexeme_authors USING gin(word gin_trgm_ops);

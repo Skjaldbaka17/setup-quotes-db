@@ -145,8 +145,8 @@ func dropStuff(conn *pgxpool.Pool) error {
 		return err
 	}
 
-	log.Println("Running: drop materialized view if exists searchviews, topicsview, unique_lexeme_authors, unique_lexeme_quotes, unique_lexeme;")
-	_, err = conn.Exec(context.Background(), "drop materialized view if exists searchviews, topicsview, unique_lexeme_authors, unique_lexeme_quotes, unique_lexeme;")
+	log.Println("Running: drop materialized view if exists searchviews, topicsview, unique_lexeme_authors, unique_lexeme_quotes, unique_lexeme, popularityView;")
+	_, err = conn.Exec(context.Background(), "drop materialized view if exists searchviews, topicsview, unique_lexeme_authors, unique_lexeme_quotes, unique_lexeme, popularityView;")
 	if err != nil {
 		return err
 	}
@@ -251,6 +251,12 @@ func SetupDBEnv(conn *pgxpool.Pool) error {
 		return err
 	}
 	file = ReadTextFile("./sql/aodiceview.sql")
+	_, err = conn.Exec(context.Background(), file)
+	if err != nil {
+		return err
+	}
+
+	file = ReadTextFile("./sql/popularityView.sql")
 	_, err = conn.Exec(context.Background(), file)
 	if err != nil {
 		return err
