@@ -5,6 +5,5 @@ CREATE TABLE topics(
    count integer default 0,
    created_at timestamptz default current_timestamp,
    updated_at timestamptz,
-   deleted_at timestamptz,
-   tsv tsvector
+   deleted_at timestamptz
 );
